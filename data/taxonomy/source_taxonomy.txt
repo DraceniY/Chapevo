@@ -1,0 +1,14 @@
+Division of kingdom for 5 categories : Plantae, Fungi, Protista, Animalia and Monera. source : https://www.ruf.rice.edu/~bioslabs/studies/invertebrates/kingdoms.html and  https://doi.org/10.1073/pnas.87.12.4576 
+Viridiplantae from plantae https://www.pnas.org/content/87/12/4576.short + https://www.frontiersin.org/articles/10.3389/fpls.2013.00544/full
+Metazoa from Animalia http://www.oxfordscholarship.com/view/10.1093/acprof:oso/9780199606023.001.0001/acprof-9780199606023-chapter-2
+Emiliania huxleyl from protista http://protists.ensembl.org/Emiliania_huxleyi/Info/Index
+Capsaspora owczarzaki from protista http://multicellgenome.com/meet-our-organisms/capsaspora-owczarzaki
+Salpingocea rosetta from protista https://www.sciencedirect.com/science/article/pii/S0959437X16300557
+Cryptosporidium muris from protista https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3368497/
+Eimeria tanella from protista http://parasite.org.au/para-site/text/eimeria-text.html
+Trypanosoma brucei from protista https://academic.oup.com/mbe/article/17/7/989/1064644
+Babesia from protista http://dna.kdna.ucla.edu/parasite_course-old/babesia_files/babesia.htm
+Theileria from protista https://www.cabi.org/isc/datasheet/62104
+Plasmodium from protista https://msu.edu/course/zol/316/pspptax.htm
+
+
