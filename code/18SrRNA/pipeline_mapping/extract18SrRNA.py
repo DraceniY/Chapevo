@@ -10,8 +10,8 @@ import subprocess
 
 
 
-
-
+# expects a local copy of RNAmmer in the path
+# expects a local copy of Hisat2 in the path
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -23,7 +23,7 @@ def create_index(genome_fasta, nameOUT):
 
 
 
-    SYN_rRNA_FASTA = '../../../data/pipeline_mapping_reads_genome/fastq_files/reads_total.fastq' 
+    SYN_rRNA_FASTA = '../../../data/18SrRNA/pipeline_mapping/fastq_files/reads_total.fastq' 
 
 
     # extract species prefix
@@ -31,19 +31,19 @@ def create_index(genome_fasta, nameOUT):
 
 
     # build Hisat2 index for target genome
-    cmd_index_build = './hisat2-build' + ' ' +  genome_fasta + ' ' + prefix
+    cmd_index_build = 'hisat2-build' + ' ' +  genome_fasta + ' ' + prefix
     subprocess.call(cmd_index_build, shell=True)
 
     # align synthetic rRNA mix to target genome
     if not os.path.exists('TMP'):
         os.makedirs('TMP')
 
-    cmd_align = './hisat2' + ' ' + '-f' + ' ' + '-a' + ' ' + '-x' + prefix + ' ' + '-U' + ' ' + SYN_rRNA_FASTA + ' ' + '>' + ' ' + nameOUT
+    cmd_align = 'hisat2' + ' ' + '-f' + ' ' + '-a' + ' ' + '-x' + prefix + ' ' + '-U' + ' ' + SYN_rRNA_FASTA + ' ' + '>' + ' ' + nameOUT
     subprocess.call(cmd_align, shell=True) 
 
     # remove index
-    if os.path.exists(prefix + '*.ht2'): 
-        os.remove(prefix + '*.ht2') 
+    if os.path.exists('*.ht2'): 
+        os.remove('*.ht2') 
 
 
 
@@ -111,7 +111,7 @@ def parse_sorted_sam_file(sam_file):
                         counter += 1
                    
                 elif chromo != last_chromo:
-                    if len(sam_df['position']) > best_cov:
+                    if len(sam_df['position']) > best_cov and ((max(sam_df['position']) - min(sam_df['position'])) > 1500 ):
                         best_df = sam_df
                         best_cov = len(best_df['position'])
 
@@ -123,6 +123,9 @@ def parse_sorted_sam_file(sam_file):
 
     if len(sam_df['position']) > best_cov:
         best_df = sam_df
+
+
+    print(best_df)
  
     return best_df
 
@@ -170,8 +173,8 @@ def analyze_sam(sam_df):
     if best_chromosome != "None" and best_len > 0 and best_len < 3000 :
 
         # add 500 bases to start and end position
-        start = int(best_start) - np.minimum(500, int(best_start) ) 
-        end   = int(best_end) + 500
+        start = int(best_start) - np.minimum(1500, int(best_start) ) 
+        end   = int(best_end) + 1500
 
 
     elif best_chromosome != "None" and best_len > 3000:
@@ -216,8 +219,8 @@ def analyze_sorted_sam(sam_df):
     """
 
     best_chromosome = list(set(list(sam_df["chromosome"])))
-    best_chromosome =  best_chromosome[0]
-
+    print(best_chromosome)
+    best_chromosome = best_chromosome[0]
 
     best_coverage = 0
     best_start = 10000000000
@@ -241,8 +244,8 @@ def analyze_sorted_sam(sam_df):
     if best_len > 0 and best_len < 3000 :
 
         # add 500 bases to start and end position
-        start = int(best_start) - np.minimum(500, int(best_start) )
-        end   = int(best_end) + 500
+        start = int(best_start) - np.minimum(1500, int(best_start) )
+        end   = int(best_end) + 1500
 
     elif best_len > 3000:
         # find a smaller candidate region, here e.g. of max 3000nt
@@ -300,27 +303,29 @@ def run_pipeline(genome_file):
         #current_sam = parse_sam_file(sam_file)
         current_sam = parse_sorted_sam_file('tmp.sam')
 
-        
         #print("Identify chromosomal region with highest coverage")
         #chromo, start, end = analyze_sam(current_sam)
         chromo, start, end = analyze_sorted_sam(current_sam)
 
+        print(chromo, start, end)
+
         if chromo != 'none':
 
             # load genome fasta and extract candidate seq
+            print(genome_file)
             current_fasta = SeqIO.to_dict(SeqIO.parse(genome_file, "fasta"))
-            print(chromo)
+            print( len(current_fasta ) )
             candidate_seq = current_fasta[chromo][start:end]
             SeqIO.write(candidate_seq , prefix + "_candidate.fasta" , "fasta")
 
-            if not os.path.exists('result'):
-                os.makedirs('result')
+            if not os.path.exists('result_new'):
+                os.makedirs('result_new')
 
             # run RNAmmer
             print("Running RNAmmer")
             if os.path.exists(prefix+"_candidate.fasta"):
 
-                cmd_rnammer = "perl rnammer -S euk -m ssu -gff result/"+prefix+"_gff -h result/"+prefix+"_report -f result/"+prefix+"_18S_output.fasta "+prefix+"_candidate.fasta"
+                cmd_rnammer = "perl rnammer -S euk -m ssu -gff result_new/"+prefix+"_gff -h result_new/"+prefix+"_report -f result_new/"+prefix+"_18S_output.fasta "+prefix+"_candidate.fasta"
                 subprocess.call(cmd_rnammer, shell=True)
 
                 print("18S rRNA sequence written to file", prefix+"_18S_output.fasta") 
@@ -342,8 +347,8 @@ def run_pipeline(genome_file):
 
 if __name__ == '__main__':
 
-
-    list_genomes = glob.glob('genomes/*.fna')
+    # set to directory where all whole genome fasta files from RefSeq are stored
+    list_genomes = glob.glob('genomic/*.fna')
 
     for ix, i in enumerate(list_genomes):
         print("Analyzing", i)

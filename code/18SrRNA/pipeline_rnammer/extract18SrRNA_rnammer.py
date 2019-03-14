@@ -40,8 +40,8 @@ def run_rnammer(genome):
 
 if __name__ == '__main__':
 
-
-    list_genomes = glob.glob('genomes/*.fna')
+    # set to directory where all annotated RNA Fasta files from RefSeq are stored
+    list_genomes = glob.glob('rna/*.fna')
     #list_genomes = [line.rstrip('\n') for line in open('list_genomes.txt')]
 
     for ix, i in enumerate(list_genomes):
