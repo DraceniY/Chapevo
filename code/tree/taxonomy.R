@@ -8,7 +8,7 @@ list_species <- scan("data/tree/tree_list_nodes.txt", what="", sep="\n")
 
 getinfo <- function(name){
   # function that retrieves taxonomy classification	
-	t <- taxonomy(name, api_key=api)
+	t <- taxonomy(name)
 	print(t)
 	
 	if (length(which(t$rank == "superkingdom") > 0)){superkingdom <- t$name[which(t$rank=="superkingdom")]}
