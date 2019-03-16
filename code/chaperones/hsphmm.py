@@ -103,7 +103,7 @@ if __name__ == '__main__':
     # set to directory that contains all unzipped uniprot proteome fasta files
     UNIPROT_DIR = './'
 
-    list_proteomes = glob.glob(UNIRPOT_DIR + '*.fasta')
+    list_proteomes = glob.glob(UNIPROT_DIR + '*.fasta')
 
     df_tree = pd.read_csv("../../data/tree/tree_uniprot.txt", sep='\t', header=0)
     
