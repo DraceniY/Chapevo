@@ -100,7 +100,10 @@ def run_all(proteomes):
 
 if __name__ == '__main__':
 
-    list_proteomes = glob.glob('/home/sebastian/Denali/Yasmine/uniprot/*.fasta')
+    # set to directory that contains all unzipped uniprot proteome fasta files
+    UNIPROT_DIR = './'
+
+    list_proteomes = glob.glob(UNIRPOT_DIR + '*.fasta')
 
     df_tree = pd.read_csv("../../data/tree/tree_uniprot.txt", sep='\t', header=0)
     
@@ -114,7 +117,7 @@ if __name__ == '__main__':
         if "Notho" in current_unip :
             current_proteome = 'Nothobranchius_furzeri.fa'
         else:
-            current_proteome = glob.glob("/home/sebastian/Denali/Yasmine/uniprot/"+current_unip+"*.fasta")[0]
+            current_proteome = glob.glob(UNIPROT_DIR + current_unip+"*.fasta")[0]
 
         count_hsp20, count_hsp40, count_hsp60, count_hsp70, count_hsp90, count_hsp100 = proteome_counts(current_proteome)
         chaperone_df.loc[counter] = [current_name, count_hsp20, count_hsp40, count_hsp60, count_hsp70, count_hsp90, count_hsp100] 
