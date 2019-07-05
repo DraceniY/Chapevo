@@ -1,6 +1,8 @@
 # Analyses of chaperone counts
 
 library(proxy)
+library(reshape)
+library(ggplot2)
 
 # chaperone counts
 hsp <- read.csv("data/chaperones/hsp.txt", sep='\t', stringsAsFactors = F)
@@ -218,5 +220,289 @@ plot_grid(plot.hsp20, plot.hsp60, plot.hsp100, labels ="", ncol = 1, align = 'v'
 
 
 dev.off()
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+library(ggdendro)
+
+hsp <- read.csv("data/chaperones/hsp.txt", sep='\t', stringsAsFactors = F)
+
+hsp.name <- hsp[,1]
+hsp.norm <- as.matrix(hsp[,-1])
+hsp.norm <- hsp.norm / rowSums(hsp.norm)
+
+tax <- read.table("data/taxonomy/tree_taxonomy.txt", header=T, sep='\t')
+c1 <- tax$kingdom == "Fungi"
+c2 <- tax$kingdom == "Metazoa"
+c3 <- tax$kingdom == "Viridiplantae"
+
+
+cosinesimilarity <- function(a, b){
+	d = sum(a*b)/sqrt(sum(a^2)*sum(b^2))
+	return(d)
+}
+
+
+cos.simil <- matrix(NA, nrow=nrow(hsp.norm), ncol=nrow(hsp.norm))
+
+for (i in 1:nrow(hsp.norm)){	
+	for (j in 1:nrow(hsp.norm)){
+		
+		s1 <- as.numeric(hsp.norm[i,])
+		s2 <- as.numeric(hsp.norm[j,])
+		
+		cos.simil[i,j] <- cosinesimilarity(s1,s2)	}	
+}
+
+
+cosine.animalia <- cos.simil[c2,c2]
+dist.cos.animalia <- as.dist(1-cosine.animalia)
+hc.cos <- hclust(dist.cos.animalia)
+hc.cos$labels = hsp.name[c2]
+
+cos.data <- dendro_data(hc.cos, type = "rectangle")
+ggplot(segment(cos.data)) + 
+  geom_segment(aes(x = x, y = y, xend = xend, yend = yend)) + 
+  coord_flip() + 
+  scale_y_reverse(expand = c(0.2, 0)) + 
+  theme(axis.text.y=element_blank(), axis.ticks.y=element_blank()) +
+  labs(x = "", y="Cosine distance")
+
+
+
+postscript("figures/Figure3/Fig3D.ps", width=4, height=4, paper="special", horizontal=T, onefile=F)
+
+ggdendrogram(hc.cos, rotate = TRUE, size = 2)
+
+dev.off()
+
+
+
+hsp.composition <- rbind(hsp.norm[c(45, 46, 50, 53, 1, 23, 37), ], colMeans((hsp.norm)))
+hsp.composition <- as.data.frame(hsp.composition)
+hsp.composition$Name <- c(hsp.name[c(45,46,50,53,1,23,37)], "avrg")
+
+hsp.composition$Name <- c("1-S.purpuratus", "2-C.gigas", "3-S.ratti","4-C.remanei", "5-H.glaber", "6-P.alecto", "7-N.furzeri", "8-avrg")  
+
+
+
+hsp.compo <- melt(hsp.composition)
+
+postscript("figures/Figure3/Fig3D2.ps", width=4, height=5, paper="special", horizontal=T, onefile=F)
+
+
+ggplot(hsp.compo, aes(x=Name, y=value, fill=variable)) + 
+	geom_bar(stat="identity") + 
+	scale_fill_brewer(palette="Blues") + 
+	theme_classic()
+
+dev.off()
+	
+	
+
+
+
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+hsp <- read.csv("data/chaperones/hsp.txt", sep='\t', stringsAsFactors = F)
+agg <- read.table("data/chaperones/aggregation_summary.txt", sep='\t', header=1)
+hyd <- read.table("data/chaperones/hydrophobicity_summary.txt", sep='\t', header=1)
+diso <- read.table("data/chaperones/disorder_summary_complete.txt", sep='\t', header=1)
+
+tax <- read.table("data/taxonomy/tree_taxonomy.txt", header=T, sep='\t')
+c1 <- tax$kingdom == "Fungi"
+c2 <- tax$kingdom == "Metazoa"
+c3 <- tax$kingdom == "Viridiplantae"
+
+
+data.lm <- hsp
+data.lm$agg <- agg$Median
+data.lm$hyd <- hyd$Median
+data.lm$diso <- diso$Median
+
+
+
+postscript("figures/Figure3/Fig3E.ps", width=6, height=3, paper="special", horizontal=T, onefile=F)
+
+diso1 <- ggplot(data.lm[c2,], aes(x=Hsp40, y=diso)) + geom_point() +
+	theme_classic() +
+	theme(axis.text.y=element_text(size=12), axis.text.x = element_text(size=12)) +
+	labs(x = "Hsp40", y="Protein disorder (%)")
+
+diso2 <- ggplot(data.lm[c2,], aes(x=Hsp70, y=diso)) + geom_point() + 
+	theme(axis.text.y=element_text(size=12), axis.text.x = element_text(size=12)) +
+	labs(x = "Hsp70", y="Protein disorder (%)") +
+	theme_classic()
+
+plot_grid(diso1, diso2, labels ="", ncol = 2, align = 'h')
+
+dev.off()
+
+
+
+
+library(nnls)
+A.hsp <- as.matrix(data.lm[,c(2:7)])
+nnls.animalia.agg <- nnls(A.hsp[c2,], data.lm$agg[c2])
+nnls.animalia.diso <- nnls(A.hsp[c2,], data.lm$diso[c2])
+
+
+nnls_Rsq <- function(response, feature){
+	
+	fit <- nnls(as.matrix(response), as.matrix(feature) )
+	coef.fit <- coef(fit)
+	
+	Rsq = rep(0, length(coef.fit) + 1)
+	
+	pred <- as.vector(coef.fit %*% t(response))
+	lm.dummy <- lm(feature ~ pred)
+	out <- display(lm.dummy)
+	
+	Rsq[1] <- out$r.squared
+		
+	for (i in 1:length(coef.fit)){		
+		pred <- as.vector(coef.fit[i] %*% t(response[,i]))
+		lm.dummy <- lm(feature ~ pred)
+		out <- display(lm.dummy)
+		Rsq[i+1] <- out$r.squared	
+	}
+	names <- c("7-All", "6-Hsp20", "5-Hsp40", "4-Hsp60", "3-Hsp70", "2-Hsp90", "1-Hsp100")
+	cf <- c(0, coef.fit)
+	result <- data.frame(Name=names, Coeff=cf, R2=Rsq)
+	return(result)
+}
+	
+	
+nnls.agg <- nnls_Rsq(A.hsp, data.lm$agg)
+nnls.diso <- nnls_Rsq(A.hsp, data.lm$diso)
+nnls.hyd <- nnls_Rsq(A.hsp, data.lm$hyd)
+
+nnls.agg.animalia <- nnls_Rsq(A.hsp[c2,], data.lm$agg[c2])
+nnls.diso.animalia <- nnls_Rsq(A.hsp[c2,], data.lm$diso[c2])
+nnls.hyd.animalia <- nnls_Rsq(A.hsp[c2,], data.lm$hyd[c2])
+
+nnls.agg.fungi <- nnls_Rsq(A.hsp[c1,], data.lm$agg[c1])
+nnls.diso.fungi <- nnls_Rsq(A.hsp[c1,], data.lm$diso[c1])
+nnls.hyd.fungi <- nnls_Rsq(A.hsp[c1,], data.lm$hyd[c1])
+
+
+nnls.agg.plantae <- nnls_Rsq(A.hsp[c3,], data.lm$agg[c3])
+nnls.diso.plantae <- nnls_Rsq(A.hsp[c3,], data.lm$diso[c3])
+nnls.hyd.plantae <- nnls_Rsq(A.hsp[c3,], data.lm$hyd[c3])
+
+
+
+
+
+
+#plot.fungi.hyd <- ggplot(nnls.hyd.fungi, aes(x=Name, y=R2)) + geom_bar(stat="identity") +
+	labs(y = "R^2", x="Hydrophobicity") +
+	coord_flip()	
+plot.fungi.agg <- ggplot(nnls.agg.fungi, aes(x=Name, y=R2)) + geom_bar(stat="identity") +
+	labs(y = "R^2", x="Aggregation propensity") +
+	coord_flip()
+plot.fungi.diso <- ggplot(nnls.diso.fungi, aes(x=Name, y=R2)) + geom_bar(stat="identity") +
+	labs(y = "R^2", x="Protein disorder (%)") +
+	coord_flip()
+	
+	
+#plot.animalia.hyd <- ggplot(nnls.hyd.animalia, aes(x=Name, y=R2)) + geom_bar(stat="identity") +
+	labs(y = "R^2", x="Hydrophobicity") +
+	coord_flip()	
+plot.animalia.agg <- ggplot(nnls.agg.animalia, aes(x=Name, y=R2)) + geom_bar(stat="identity") +
+	labs(y = "R^2", x="Aggregation propensity") +
+	coord_flip()
+plot.animalia.diso <- ggplot(nnls.diso.animalia, aes(x=Name, y=R2)) + geom_bar(stat="identity") +
+	labs(y = "R^2", x="Protein disorder (%)") +
+	coord_flip()
+	
+	
+#plot.plantae.hyd <- ggplot(nnls.hyd.plantae, aes(x=Name, y=R2)) + geom_bar(stat="identity") +
+	labs(y = "R^2", x="Hydrophobicity") +
+	coord_flip()
+plot.plantae.agg <- ggplot(nnls.agg.plantae, aes(x=Name, y=R2)) + geom_bar(stat="identity") +
+	labs(y = "R^2", x="Aggregation propensity") +
+	coord_flip()
+plot.plantae.diso <- ggplot(nnls.diso.plantae, aes(x=Name, y=R2)) + geom_bar(stat="identity") +
+	labs(y = "R^2", x="Protein disorder (%)") +
+	coord_flip()
+
+
+postscript("figures/Supplement/FigS3_R2.ps", width=7, height=8, paper="special", horizontal=T, onefile=F)
+
+plot_grid(plot.fungi.agg, plot.fungi.diso, plot.animalia.agg, plot.animalia.diso, plot.plantae.agg, plot.plantae.diso, labels=c("Fungi", "Fungi", "Animalia", "Animalia", "Plantae", "Plantae"), ncol = 2, align = 'h')
+
+dev.off()
+
+
+
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+hsp <- read.csv("data/chaperones/hsp.txt", sep='\t', stringsAsFactors = F)
+agg <- read.table("data/chaperones/aggregation_summary.txt", sep='\t', header=1)
+hyd <- read.table("data/chaperones/hydrophobicity_summary.txt", sep='\t', header=1)
+diso <- read.table("data/chaperones/disorder_summary_complete.txt", sep='\t', header=1)
+
+tax <- read.table("data/taxonomy/tree_taxonomy.txt", header=T, sep='\t')
+c1 <- tax$kingdom == "Fungi"
+c2 <- tax$kingdom == "Metazoa"
+c3 <- tax$kingdom == "Viridiplantae"
+
+
+data.lm <- hsp
+data.lm$agg <- agg$Median
+data.lm$hyd <- hyd$Median
+data.lm$diso <- diso$Median
+
+
+data.lm$tax = rep("NA", nrow(agg))
+data.lm$tax[c1] <- "1 - Fungi"
+data.lm$tax[c2] <- "2 - Metazoa"
+data.lm$tax[c3] <- "3 - Plantae"
+
+data.lm <- data.lm[data.lm$tax!="NA",]
+
+agg2  <- melt( data.frame(Name=data.lm$Name, Median=data.lm$agg, Tax=data.lm$tax) )
+hyd2  <- melt( data.frame(Name=data.lm$Name, Median=data.lm$hyd, Tax=data.lm$tax) )
+diso2 <- melt( data.frame(Name=data.lm$Name, Median=data.lm$diso, Tax=data.lm$tax) )
+
+
+
+postscript("figures/Supplement/FigS3B.ps", width=5, height=10, paper="special", horizontal=T, onefile=F)
+
+p1 <- ggplot(agg2, aes(x=value, fill=Tax) ) + 
+	geom_density() + 
+	theme_classic() + 
+	theme(axis.text.x = element_text(size=16), axis.text.y = element_text(size=16)) + 
+	labs(x = "Median agg.score ", y="Density")	
+dens.agg <- p1 + facet_grid(rows=vars(Tax) ) 
+
+
+p2 <- ggplot(hyd2, aes(x=value, fill=Tax) ) + 
+	geom_density() + 
+	theme_classic() + 
+	theme(axis.text.x = element_text(size=16), axis.text.y = element_text(size=16)) + 
+	labs(x = "Median hydrophobicity ", y="Density")	
+dens.hyd <- p2 + facet_grid(rows=vars(Tax) ) 
+
+
+p3 <- ggplot(diso2, aes(x=value, fill=Tax) ) + 
+	geom_density() + 
+	theme_classic() + 
+	theme(axis.text.x = element_text(size=16), axis.text.y = element_text(size=16)) + 
+	labs(x = "Median % disorder ", y="Density")
+dens.diso <- p3 + facet_grid(rows=vars(Tax) ) 
+
+
+plot_grid(dens.hyd, dens.agg, dens.diso, labels="", ncol = 1, align = 'v')
+
+
+dev.off()
+
 
 

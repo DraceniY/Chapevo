@@ -63,11 +63,20 @@ data.hm <- melt(data.hm)
 data.hm$breaks <- cut(as.numeric(data.hm$value), c(0,1,2,3,5,10,15,20,25,30,40,50,60,75,90,215), right=F)
 
 
+library(viridis)
+library(scales)
+v_colors =  viridis(15, begin=0, end=1, option = "D")
+
 # PLOT OF THE HEATMAP
 postscript("figures/Figure2/Fig2_heatmap.ps", width=6, height=6, paper="special", horizontal=T, onefile=F)
 
 ggplot(data.hm, aes(x = variable, y = species)) + geom_tile(aes(fill=breaks),color="white", size=0.1) + labs(x=NULL, y=NULL) + theme(axis.text.y = element_blank(), axis.ticks=element_blank() ) + scale_fill_manual(values=c("#29ABE2", "#3E99CA", "#5488B3", "#6A769C", "#96536E", "#C13040", "#ED0D12", "#FF1A00", "#FF4600", "#FF7200", "#FF9D00", "#FFB300", "#FFC900", "#FFD700", 'yellow'))
       
+dev.off()
+
+
+postscript("figures/Figure2/Fig2_heatmap_viridis.ps", width=6, height=6, paper="special", horizontal=T, onefile=F)
+ggplot(data.hm, aes(x = variable, y = species)) + geom_tile(aes(fill=breaks),color="white", size=0.1) + labs(x=NULL, y=NULL) + theme(axis.text.y = element_blank(), axis.ticks=element_blank() ) + scale_fill_manual(values=v_colors)
 dev.off()
 
 
