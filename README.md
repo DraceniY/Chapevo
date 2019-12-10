@@ -1,10 +1,11 @@
-Pervasive convergent evolution and extreme phenotypes define chaperone requirements of protein homeostasis
+# Pervasive convergent evolution and extreme phenotypes define chaperone requirements of protein homeostasis
 
-Yasmine Draceni & Sebastian Pechmann
+## Yasmine Draceni & Sebastian Pechmann
 
-Department of Biochemistry, University of Montreal
+### Department of Biochemistry, University of Montreal
 
-(2019)
+Proc Natl Acad Sci, 116(40):20009-20014 (2019)
+https://www.pnas.org/content/116/40/20009
 
 
 Dependencies:
